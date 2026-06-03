@@ -38,20 +38,12 @@ public class TextDatabaseManipulator<TRecord extends ITextDBRecord> {
         File file = new File(fileName);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String oldFileNewName = fileName + "_" + LocalDate.now();
-            File oldFile = new File(oldFileNewName);
-
-            if (!file.exists()) {
-                file.createNewFile();
-
+            if (!file.exists())
                 return; // Nothing to read. Return!
-            }
-
-            file.renameTo(oldFile);
 
             importRecordsFromTextFile(reader);
         } catch (IOException e) {
-            throw new TextDatabaseReadException("A leitura do banco de dados em texto falhou.", e);
+            throw new TextDatabaseReadException(e);
         }
     }
 
@@ -97,11 +89,17 @@ public class TextDatabaseManipulator<TRecord extends ITextDBRecord> {
 
     /// Saves the record data to file
     public void saveToDisc() throws TextDatabaseWriteException {
-        File file = new File(fileName);
+        try {
+            File file = new File(fileName);
 
-        long fileOriginalLength = file.length();
+            String oldFileNewName = fileName + "_" + LocalDate.now();
+            File oldFile = new File(oldFileNewName);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            if (!file.renameTo(oldFile))
+                throw new TextDatabaseWriteException();
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+
             for (var record : records) {
                 writer.newLine();
 
@@ -112,7 +110,7 @@ public class TextDatabaseManipulator<TRecord extends ITextDBRecord> {
 
             writer.flush();
         } catch (IOException e) {
-            throw new TextDatabaseWriteException("A gravação do banco de dados em texto falhou.", e);
+            throw new TextDatabaseWriteException(e);
         }
     }
 
