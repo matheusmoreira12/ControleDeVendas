@@ -1,21 +1,28 @@
+import TextDatabases.Exceptions.TextDatabaseException;
 import TextDatabases.ITextDBRecord;
 import TextDatabases.TextDatabase;
-import TextDatabases.TextDatabaseWriteException;
+import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
 public class Main {
     public static void main(String[] args) {
-        var sup = new ClienteSupplier (0, "");
-        var db = new TextDatabase<> ("clientes.txt", sup);
+        var sup = new ClienteSupplier(0, "");
+        var db = new TextDatabase<>("./data/clientes.tsv", sup);
 
         try {
-            var cliente = new Cliente (0, "José");
-            db.save (cliente);
-            db.saveToDisc ( );
-        } catch (TextDatabaseWriteException e) {
-            System.out.println ("Erro: " + e + " causa: " + e.getCause ( ));
+            db.loadFromDisc();
+
+            var cliente = new Cliente(0, "José");
+            db.insert(cliente);
+
+            db.pruneStaleData();
+
+            db.saveToDisc();
+        } catch (TextDatabaseException e) {
+            System.out.println("Erro: " + e + " causa: " + e.getCause());
         }
     }
 }
@@ -31,7 +38,7 @@ class ClienteSupplier implements Supplier<Cliente> {
 
     @Override
     public Cliente get() {
-        return new Cliente (defaultId, defaultNome);
+        return new Cliente(defaultId, defaultNome);
     }
 }
 
@@ -40,31 +47,31 @@ class Cliente implements ITextDBRecord {
         this.id = id;
         this.nome = nome;
 
-        createdDate = LocalDate.now ( );
+        createdDate = LocalDateTime.now();
     }
 
     private int id;
     private String nome;
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Override
     public String[] toText() {
         return new String[]{
-                Integer.toString (id),
-                createdDate.toString ( ),
+                Integer.toString(id),
+                createdDate.toString(),
                 nome
         };
     }
 
     @Override
     public void readFromText(String[] columns) {
-        id = Integer.parseInt (columns[0]);
-        createdDate = LocalDate.parse (columns[1]);
+        id = Integer.parseInt(columns[0]);
+        createdDate = LocalDateTime.parse(columns[1]);
         nome = columns[2];
     }
 
     @Override
-    public LocalDate getCreatedDate() {
+    public LocalDateTime getCreatedDate() {
         return createdDate;
     }
 

@@ -1,19 +1,22 @@
 package TextDatabases;
 
+import TextDatabases.Exceptions.ETextDatabaseBackupFailed;
+import TextDatabases.Exceptions.ETextDatabaseReadFailed;
+import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
+import TextDatabases.Exceptions.TextDatabaseException;
+
 import java.io.*;
-import java.nio.file.Path;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /// Allows the manipulation of TSV text databases
 public class TextDatabase<TRecord extends ITextDBRecord> {
-    static private final String BASE_PATH = ".\\data\\";
-
     static private final String COLUMN_SEPARATOR = "\t";
 
     private final String fileName;
@@ -23,30 +26,26 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
     private final Supplier<TRecord> recordSupplier;
 
     public TextDatabase(String fileName, Supplier<TRecord> recordSupplier) {
-        this.fileName = BASE_PATH + fileName;
+        this.fileName = fileName;
         this.recordSupplier = recordSupplier;
-        this.records = new ArrayList<> ( );
+        this.records = new ArrayList<>();
     }
 
     /// Loads all records from a file, replacing old data with new data
-    public void loadFromDisc() throws TextDatabaseReadException {
-        File file = new File (fileName);
+    public void loadFromDisc() throws ETextDatabaseReadFailed {
+        File file = new File(fileName);
 
-        try (BufferedReader reader = new BufferedReader (new FileReader (file))) {
-            String oldFileNewName = fileName + "_" + LocalDate.now ( );
-            File oldFile = new File (oldFileNewName);
-
-            if (!file.exists ( )) {
-                file.createNewFile ( );
-
+        try {
+            if (!file.exists())
                 return; // Nothing to read. Return!
-            }
 
-            file.renameTo (oldFile);
+            BufferedReader reader = new BufferedReader(new FileReader(file));
 
-            importRecordsFromTextFile (reader);
+            importRecordsFromTextFile(reader);
+
+            reader.close();
         } catch (IOException e) {
-            throw new TextDatabaseReadException ("A leitura do banco de dados em texto falhou.", e);
+            throw new ETextDatabaseReadFailed("A leitura do banco de dados em texto falhou.", e);
         }
     }
 
@@ -54,97 +53,139 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
     private void importRecordsFromTextFile(BufferedReader reader) throws IOException {
         String line;
 
-        do {
+        while(true) {
             // Read line
-            line = reader.readLine ( );
+            line = reader.readLine();
+
+            if (line == null)
+                break; // End was reached. Break!
 
             // Parse record data
-            String[] columnStrs = line.split (COLUMN_SEPARATOR);
+            String[] cols = line.split(COLUMN_SEPARATOR);
 
             // Create and read record data
-            TRecord record = recordSupplier.get ( );
-            record.readFromText (columnStrs);
+            TRecord record = recordSupplier.get();
+            record.readFromText(cols);
 
             // Append record to list
-            records.add (record);
+            records.add(record);
         }
-        while (!line.isEmpty ( ));
     }
 
     /// Discards stale records
     public void pruneStaleData() {
         // Group the records by id
         Map<Integer, List<TRecord>> groupedById = records
-                .stream ( )
-                .collect (Collectors.groupingBy (ITextDBRecord::getId));
+                .stream()
+                .collect(Collectors.groupingBy(ITextDBRecord::getId));
 
         // Iterate over each group, preserving only the last record
-        for (int key : groupedById.keySet ( )) {
-            var items = groupedById.get (key);
+        for (int key : groupedById.keySet()) {
+            var items = groupedById.get(key);
 
-            items.sort ((o1, o2) -> o2.getCreatedDate ( ).compareTo (o1.getCreatedDate ( )));
+            items.sort((o1, o2) -> o2.getCreatedDate().compareTo(o1.getCreatedDate()));
 
             // Remove all stale records
-            for (int i = 0; i < items.size ( ) - 1; i++)
-                records.remove (items.get (i));
+            for (int i = 0; i < items.size() - 1; i++)
+                records.remove(items.get(i));
         }
     }
 
     /// Saves the record data to file
-    public void saveToDisc() throws TextDatabaseWriteException {
+    public void saveToDisc() throws TextDatabaseException {
         try {
-            String salt = String.format("%07d", (int)(Math.random () * 1000000));
-            String oldFileName = fileName + "_" + LocalDate.now ( ) + "_" + salt;
+            String salt = String.format("%07d", (int) (Math.random() * 1000000));
+            String oldFileName = fileName + "_" + LocalDateTime.now().format(StaticDefaults.FILE_DATE_TIME_FORMATTER) + "_" + salt;
+            File old = new File(oldFileName);
 
-            File old = new File (oldFileName);
+            File file = new File(fileName);
 
-            File file = new File (fileName);
+            if (file.exists() && !file.renameTo(old))
+                throw new ETextDatabaseBackupFailed();
 
-            if (file.exists () && !file.renameTo (old))
-                throw new TextDatabaseWriteException ("Não foi possível fazer backup dos dados.", null);
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 
-            BufferedWriter writer = new BufferedWriter (new FileWriter (file));
+            boolean isFirstLine = true;
 
             for (var record : records) {
-                writer.newLine ( );
+                if (!isFirstLine)
+                    writer.newLine();
 
-                String recordStr = String.join (COLUMN_SEPARATOR, record.toText ( ));
+                String recordStr = String.join(COLUMN_SEPARATOR, record.toText());
 
-                writer.write (recordStr);
+                writer.write(recordStr);
+
+                isFirstLine = false;
             }
 
-            writer.close ();
+            writer.close();
         } catch (IOException e) {
-            throw new TextDatabaseWriteException ("A gravação do banco de dados em texto falhou.", e);
+            throw new ETextDatabaseWriteFailed(e);
         }
     }
 
-    public void save(TRecord record) {
-        this.records.add (record);
+    public long insert(Stream<TRecord> recordStream) {
+        // Insert each record, counting the number of successful updates
+        return recordStream.map(this::insert).filter(s -> s).count();
     }
 
-    public TRecord get(int id) {
-        return getAll ( ).filter (r -> r.getId ( ) == id).findFirst ( ).orElse (null);
+    /**
+     * @param record the record being inserted
+     * @return true, if successful.
+     */
+    public boolean insert(TRecord record) {
+        boolean hasConflicts = recordExistsForId(record.getId());
+        if (hasConflicts)
+            return false;
+
+        this.records.add(record);
+
+        return false;
     }
 
-    /// Gets all the most recent records
-    public Stream<TRecord> getAll() {
-        var groupedById = getRecordsGroupedById ( );
+    public long update(Stream<TRecord> records) {
+        // Update each record, counting the number of successful updates
+        return records.map(this::update).filter(s -> s).count();
+    }
+
+    public boolean update(TRecord record) {
+        boolean recordExists = recordExistsForId(record.getId());
+        if (!recordExists)
+            return false;
+
+        this.records.add(record);
+
+        return true;
+    }
+
+    public Stream<TRecord> select(Predicate<TRecord> predicate) {
+        return getAll().filter(predicate);
+    }
+
+    private boolean recordExistsForId(int id) {
+        return records.stream().anyMatch(r -> r.getId() == id);
+    }
+
+    public void drop(int id) {
+        this.records.removeIf(r -> r.getId() == id);
+    }
+
+    private Stream<TRecord> getAll() {
+        var groupedById = getRecordsGroupedById();
 
         // Return only most recent data
-        return groupedById.keySet ( ).stream ( ).map (k -> {
+        return groupedById.keySet().stream().map(k -> {
             // Get all records matching id
-            var records = groupedById.get (k);
+            var records = groupedById.get(k);
 
             // Sort by date ascending
-            records.sort ((o1, o2) -> o2.getCreatedDate ( ).compareTo (o1.getCreatedDate ( )));
+            records.sort((o1, o2) -> o2.getCreatedDate().compareTo(o1.getCreatedDate()));
 
-            return records.getLast ( );
+            return records.getLast();
         });
     }
 
     private Map<Integer, List<TRecord>> getRecordsGroupedById() {
-        return records.stream ( ).collect (Collectors.groupingBy (ITextDBRecord::getId));
+        return records.stream().collect(Collectors.groupingBy(ITextDBRecord::getId));
     }
 }
-
