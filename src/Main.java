@@ -1,9 +1,7 @@
 import TextDatabases.Exceptions.TextDatabaseException;
 import TextDatabases.ITextDBRecord;
 import TextDatabases.TextDatabase;
-import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
@@ -16,9 +14,9 @@ public class Main {
             db.loadFromDisc();
 
             var cliente = new Cliente(0, "José");
-            db.insert(cliente);
+            db.upsert(cliente);
 
-            db.pruneStaleData();
+            db.prune();
 
             db.saveToDisc();
         } catch (TextDatabaseException e) {

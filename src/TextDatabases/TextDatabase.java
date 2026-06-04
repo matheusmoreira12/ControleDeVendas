@@ -31,8 +31,10 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         this.records = new ArrayList<>();
     }
 
-    /// Loads all records from a file, replacing old data with new data
-    public void loadFromDisc() throws ETextDatabaseReadFailed {
+    /**
+     * @throws TextDatabaseException when reading fails.
+     */
+    public void loadFromDisc() throws TextDatabaseException {
         File file = new File(fileName);
 
         try {
@@ -49,49 +51,47 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         }
     }
 
-    /// Imports all records from a file
     private void importRecordsFromTextFile(BufferedReader reader) throws IOException {
         String line;
 
-        while(true) {
-            // Read line
+        while (true) {
             line = reader.readLine();
 
             if (line == null)
                 break; // End was reached. Break!
 
-            // Parse record data
+            if (line.isBlank())
+                continue;
+
             String[] cols = line.split(COLUMN_SEPARATOR);
 
-            // Create and read record data
             TRecord record = recordSupplier.get();
             record.readFromText(cols);
 
-            // Append record to list
             records.add(record);
         }
     }
 
-    /// Discards stale records
-    public void pruneStaleData() {
-        // Group the records by id
-        Map<Integer, List<TRecord>> groupedById = records
-                .stream()
-                .collect(Collectors.groupingBy(ITextDBRecord::getId));
+    /**
+     * Removes old duplicates from the internal storage.
+     */
+    public void prune() {
+        Map<Integer, List<TRecord>> groupedById = getRecordsGroupedById();
 
-        // Iterate over each group, preserving only the last record
-        for (int key : groupedById.keySet()) {
-            var items = groupedById.get(key);
+        for (var entry : groupedById.entrySet()) {
+            var duplicates = entry.getValue();
 
-            items.sort((o1, o2) -> o2.getCreatedDate().compareTo(o1.getCreatedDate()));
+            duplicates.sort((o1, o2) -> o1.getCreatedDate().compareTo(o2.getCreatedDate()));
 
-            // Remove all stale records
-            for (int i = 0; i < items.size() - 1; i++)
-                records.remove(items.get(i));
+            // Delete all old duplicates
+            for (int i = 0; i < duplicates.size() - 1; i++)
+                records.remove(duplicates.get(i));
         }
     }
 
-    /// Saves the record data to file
+    /**
+     * @throws TextDatabaseException if saving fails.
+     */
     public void saveToDisc() throws TextDatabaseException {
         try {
             String salt = String.format("%07d", (int) (Math.random() * 1000000));
@@ -105,17 +105,11 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
 
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 
-            boolean isFirstLine = true;
-
             for (var record : records) {
-                if (!isFirstLine)
-                    writer.newLine();
-
                 String recordStr = String.join(COLUMN_SEPARATOR, record.toText());
-
                 writer.write(recordStr);
 
-                isFirstLine = false;
+                writer.newLine();
             }
 
             writer.close();
@@ -124,9 +118,14 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         }
     }
 
+    /**
+     * @param recordStream the records being added.
+     * @return the number of records successfully inserted.
+     */
     public long insert(Stream<TRecord> recordStream) {
-        // Insert each record, counting the number of successful updates
-        return recordStream.map(this::insert).filter(s -> s).count();
+        return recordStream.map(this::insert)
+                .filter(success -> success)
+                .count();
     }
 
     /**
@@ -143,11 +142,19 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         return false;
     }
 
-    public long update(Stream<TRecord> records) {
-        // Update each record, counting the number of successful updates
-        return records.map(this::update).filter(s -> s).count();
+    /**
+     * @param recordStream the records being updated.
+     * @return the number of records successfully updated.
+     */
+    public long update(Stream<TRecord> recordStream) {
+        return recordStream.map(this::update)
+                .filter(success -> success)
+                .count();
     }
 
+    /**
+     * @param record the record being updated.
+     */
     public boolean update(TRecord record) {
         boolean recordExists = recordExistsForId(record.getId());
         if (!recordExists)
@@ -158,14 +165,36 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         return true;
     }
 
+    /**
+     * @param recordStream the records being inserted or updated.
+     */
+    public void upsert(Stream<TRecord> recordStream) {
+        recordStream.forEach(this::upsert);
+    }
+
+    /**
+     * @param record the record being inserted or updated.
+     */
+    public void upsert(TRecord record) {
+        this.records.add(record);
+    }
+
+    /**
+     * @param predicate the selection predicate.
+     * @return the matching records.
+     */
     public Stream<TRecord> select(Predicate<TRecord> predicate) {
         return getAll().filter(predicate);
     }
 
     private boolean recordExistsForId(int id) {
-        return records.stream().anyMatch(r -> r.getId() == id);
+        return records.stream()
+                .anyMatch(r -> r.getId() == id);
     }
 
+    /**
+     * @param id the id of the record being dropped.
+     */
     public void drop(int id) {
         this.records.removeIf(r -> r.getId() == id);
     }
@@ -186,6 +215,7 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
     }
 
     private Map<Integer, List<TRecord>> getRecordsGroupedById() {
-        return records.stream().collect(Collectors.groupingBy(ITextDBRecord::getId));
+        return records.stream()
+                .collect(Collectors.groupingBy(ITextDBRecord::getId));
     }
 }
