@@ -6,7 +6,10 @@ import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 import TextDatabases.Exceptions.TextDatabaseException;
 
 import java.io.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,10 +18,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static TextDatabases.StaticDefaults.COLUMN_SEPARATOR;
+import static TextDatabases.StaticDefaults.FILE_DATE_TIME_FORMATTER;
+
 /// Allows the manipulation of TSV text databases
 public class TextDatabase<TRecord extends ITextDBRecord> {
-    static private final String COLUMN_SEPARATOR = "\t";
-
     private final String fileName;
 
     private final ArrayList<TRecord> records;
@@ -47,7 +51,7 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
 
             reader.close();
         } catch (IOException e) {
-            throw new ETextDatabaseReadFailed("A leitura do banco de dados em texto falhou.", e);
+            throw new ETextDatabaseReadFailed(e);
         }
     }
 
@@ -95,7 +99,8 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
     public void saveToDisc() throws TextDatabaseException {
         try {
             String salt = String.format("%07d", (int) (Math.random() * 1000000));
-            String oldFileName = fileName + "_" + LocalDateTime.now().format(StaticDefaults.FILE_DATE_TIME_FORMATTER) + "_" + salt;
+            OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
+            String oldFileName = fileName + "_" + nowUtc.format(FILE_DATE_TIME_FORMATTER) + "_" + salt;
             File old = new File(oldFileName);
 
             File file = new File(fileName);

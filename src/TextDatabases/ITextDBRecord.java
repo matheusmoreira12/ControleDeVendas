@@ -1,13 +1,13 @@
 package TextDatabases;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public interface ITextDBRecord {
     String[] toText();
 
     void readFromText(String[] columns);
 
-    LocalDateTime getCreatedDate();
+    OffsetDateTime getCreatedDate();
 
     int getId();
 }
