@@ -10,7 +10,7 @@ public class Main {
             db.loadFromDisc ( );
 
             var cliente = new Cliente (0, "José");
-            db.upsert (cliente);
+            db.insert (cliente);
 
             db.prune ( );
 

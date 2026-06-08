@@ -6,11 +6,10 @@ import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 import TextDatabases.Exceptions.TextDatabaseException;
 
 import java.io.*;
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -22,7 +21,7 @@ import static TextDatabases.StaticDefaults.COLUMN_SEPARATOR;
 import static TextDatabases.StaticDefaults.FILE_DATE_TIME_FORMATTER;
 
 /// Allows the manipulation of TSV text databases
-public class TextDatabase<TRecord extends ITextDBRecord> {
+public class TextDatabase<TRecord extends TextDBRecord> {
     private final String fileName;
 
     private final ArrayList<TRecord> records;
@@ -32,26 +31,26 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
     public TextDatabase(String fileName, Supplier<TRecord> recordSupplier) {
         this.fileName = fileName;
         this.recordSupplier = recordSupplier;
-        this.records = new ArrayList<>();
+        this.records = new ArrayList<> ( );
     }
 
     /**
      * @throws TextDatabaseException when reading fails.
      */
     public void loadFromDisc() throws TextDatabaseException {
-        File file = new File(fileName);
+        File file = new File (fileName);
 
         try {
-            if (!file.exists())
+            if (!file.exists ( ))
                 return; // Nothing to read. Return!
 
-            BufferedReader reader = new BufferedReader(new FileReader(file));
+            BufferedReader reader = new BufferedReader (new FileReader (file));
 
-            importRecordsFromTextFile(reader);
+            importRecordsFromTextFile (reader);
 
-            reader.close();
+            reader.close ( );
         } catch (IOException e) {
-            throw new ETextDatabaseReadFailed(e);
+            throw new ETextDatabaseReadFailed (e);
         }
     }
 
@@ -59,20 +58,20 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
         String line;
 
         while (true) {
-            line = reader.readLine();
+            line = reader.readLine ( );
 
             if (line == null)
                 break; // End was reached. Break!
 
-            if (line.isBlank())
+            if (line.isBlank ( ))
                 continue;
 
-            String[] cols = line.split(COLUMN_SEPARATOR);
+            String[] cols = line.split (COLUMN_SEPARATOR);
 
-            TRecord record = recordSupplier.get();
-            record.readFromText(cols);
+            TRecord record = recordSupplier.get ( );
+            record.deserialize (Arrays.stream (cols));
 
-            records.add(record);
+            records.add (record);
         }
     }
 
@@ -80,16 +79,16 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * Removes old duplicates from the internal storage.
      */
     public void prune() {
-        Map<Integer, List<TRecord>> groupedById = getRecordsGroupedById();
+        Map<Integer, List<TRecord>> groupedById = getRecordsGroupedById ( );
 
-        for (var entry : groupedById.entrySet()) {
-            var duplicates = entry.getValue();
+        for (var entry : groupedById.entrySet ( )) {
+            var duplicates = entry.getValue ( );
 
-            duplicates.sort((o1, o2) -> o1.getCreatedDate().compareTo(o2.getCreatedDate()));
+            duplicates.sort ((o1, o2) -> o1.getCreatedDate ( ).compareTo (o2.getCreatedDate ( )));
 
             // Delete all old duplicates
-            for (int i = 0; i < duplicates.size() - 1; i++)
-                records.remove(duplicates.get(i));
+            for (int i = 0; i < duplicates.size ( ) - 1; i++)
+                records.remove (duplicates.get (i));
         }
     }
 
@@ -98,28 +97,28 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      */
     public void saveToDisc() throws TextDatabaseException {
         try {
-            String salt = String.format("%07d", (int) (Math.random() * 1000000));
-            OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
-            String oldFileName = fileName + "_" + nowUtc.format(FILE_DATE_TIME_FORMATTER) + "_" + salt;
-            File old = new File(oldFileName);
+            String salt = String.format ("%07d", (int) (Math.random ( ) * 1000000));
+            OffsetDateTime nowUtc = OffsetDateTime.now (ZoneOffset.UTC);
+            String oldFileName = fileName + "_" + nowUtc.format (FILE_DATE_TIME_FORMATTER) + "_" + salt;
+            File old = new File (oldFileName);
 
-            File file = new File(fileName);
+            File file = new File (fileName);
 
-            if (file.exists() && !file.renameTo(old))
-                throw new ETextDatabaseBackupFailed();
+            if (file.exists ( ) && !file.renameTo (old))
+                throw new ETextDatabaseBackupFailed ( );
 
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+            BufferedWriter writer = new BufferedWriter (new FileWriter (file));
 
             for (var record : records) {
-                String recordStr = String.join(COLUMN_SEPARATOR, record.toText());
-                writer.write(recordStr);
+                String recordStr = String.join (COLUMN_SEPARATOR, record.serialize ( ).toList ( ));
+                writer.write (recordStr);
 
-                writer.newLine();
+                writer.newLine ( );
             }
 
-            writer.close();
+            writer.close ( );
         } catch (IOException e) {
-            throw new ETextDatabaseWriteFailed(e);
+            throw new ETextDatabaseWriteFailed (e);
         }
     }
 
@@ -128,9 +127,9 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * @return the number of records successfully inserted.
      */
     public long insert(Stream<TRecord> recordStream) {
-        return recordStream.map(this::insert)
-                .filter(success -> success)
-                .count();
+        return recordStream.map (this::insert)
+                .filter (success -> success)
+                .count ( );
     }
 
     /**
@@ -138,11 +137,11 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * @return true, if successful.
      */
     public boolean insert(TRecord record) {
-        boolean hasConflicts = recordExistsForId(record.getId());
+        boolean hasConflicts = recordExistsForId (record.getId ( ));
         if (hasConflicts)
             return false;
 
-        this.records.add(record);
+        this.records.add (record);
 
         return false;
     }
@@ -152,20 +151,20 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * @return the number of records successfully updated.
      */
     public long update(Stream<TRecord> recordStream) {
-        return recordStream.map(this::update)
-                .filter(success -> success)
-                .count();
+        return recordStream.map (this::update)
+                .filter (success -> success)
+                .count ( );
     }
 
     /**
      * @param record the record being updated.
      */
     public boolean update(TRecord record) {
-        boolean recordExists = recordExistsForId(record.getId());
+        boolean recordExists = recordExistsForId (record.getId ( ));
         if (!recordExists)
             return false;
 
-        this.records.add(record);
+        this.records.add (record);
 
         return true;
     }
@@ -174,14 +173,14 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * @param recordStream the records being inserted or updated.
      */
     public void upsert(Stream<TRecord> recordStream) {
-        recordStream.forEach(this::upsert);
+        recordStream.forEach (this::upsert);
     }
 
     /**
      * @param record the record being inserted or updated.
      */
     public void upsert(TRecord record) {
-        this.records.add(record);
+        this.records.add (record);
     }
 
     /**
@@ -189,38 +188,38 @@ public class TextDatabase<TRecord extends ITextDBRecord> {
      * @return the matching records.
      */
     public Stream<TRecord> select(Predicate<TRecord> predicate) {
-        return getAll().filter(predicate);
+        return getAll ( ).filter (predicate);
     }
 
     private boolean recordExistsForId(int id) {
-        return records.stream()
-                .anyMatch(r -> r.getId() == id);
+        return records.stream ( )
+                .anyMatch (r -> r.getId ( ) == id);
     }
 
     /**
      * @param id the id of the record being dropped.
      */
     public void drop(int id) {
-        this.records.removeIf(r -> r.getId() == id);
+        this.records.removeIf (r -> r.getId ( ) == id);
     }
 
     private Stream<TRecord> getAll() {
-        var groupedById = getRecordsGroupedById();
+        var groupedById = getRecordsGroupedById ( );
 
         // Return only most recent data
-        return groupedById.keySet().stream().map(k -> {
+        return groupedById.keySet ( ).stream ( ).map (k -> {
             // Get all records matching id
-            var records = groupedById.get(k);
+            var records = groupedById.get (k);
 
             // Sort by date ascending
-            records.sort((o1, o2) -> o2.getCreatedDate().compareTo(o1.getCreatedDate()));
+            records.sort ((o1, o2) -> o2.getCreatedDate ( ).compareTo (o1.getCreatedDate ( )));
 
-            return records.getLast();
+            return records.getLast ( );
         });
     }
 
     private Map<Integer, List<TRecord>> getRecordsGroupedById() {
-        return records.stream()
-                .collect(Collectors.groupingBy(ITextDBRecord::getId));
+        return records.stream ( )
+                .collect (Collectors.groupingBy (TextDBRecord::getId));
     }
 }

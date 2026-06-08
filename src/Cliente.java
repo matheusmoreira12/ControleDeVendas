@@ -1,9 +1,12 @@
-import TextDatabases.ITextDBRecord;
+import TextDatabases.TextDBRecord;
 import TextDatabases.TextDBUtils;
 
 import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
-public class Cliente implements ITextDBRecord {
+public class Cliente extends TextDBRecord {
     public Cliente(int id, String nome) {
         this.id = id;
         this.nome = nome;
@@ -16,19 +19,19 @@ public class Cliente implements ITextDBRecord {
     private OffsetDateTime createdDate;
 
     @Override
-    public String[] toText() {
-        return new String[]{
-                Integer.toString (id),
-                TextDBUtils.formatDate (createdDate),
+    public Stream<String> serialize() {
+        String[] appendedData = {
                 nome
         };
+
+        return Stream.concat (super.serialize ( ), Arrays.stream (appendedData));
     }
 
     @Override
-    public void readFromText(String[] columns) {
-        id = Integer.parseInt (columns[0]);
-        createdDate = TextDBUtils.parseDate (columns[1]);
-        nome = columns[2];
+    public void deserialize(Stream<String> columnsStream) {
+        super.deserialize (columnsStream);
+
+        this.nome = columnsStream.findFirst ( ).orElseThrow ( );
     }
 
     @Override
