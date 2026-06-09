@@ -1,13 +1,19 @@
 package TextDatabases;
 
 import java.io.Reader;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.stream.Stream;
 
 public abstract class TextDBRecord {
     private OffsetDateTime createdDate;
     private int id;
+
+    public TextDBRecord() {
+        this.createdDate = OffsetDateTime.now();
+    }
 
     public Stream<String> serialize() {
         return Arrays.stream (new String[]{
@@ -16,9 +22,11 @@ public abstract class TextDBRecord {
         });
     }
 
-    public void deserialize(Stream<String> columns) {
-        id = Integer.parseInt (columns.findFirst ().orElseThrow ());
-        createdDate = TextDBUtils.parseDate (columns.findFirst ().orElseThrow ());
+    public void deserialize(Stream<String> columnStream) {
+        Iterator<String> iterator = columnStream.iterator();
+
+        id = Integer.parseInt (iterator.next());
+        createdDate = TextDBUtils.parseDate (iterator.next());
     }
 
     public OffsetDateTime getCreatedDate() {
