@@ -1,11 +1,7 @@
 import TextDatabases.TextDBRecord;
-import TextDatabases.TextDBUtils;
 
 import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Stream;
+import java.util.*;
 
 public class Cliente extends TextDBRecord {
     public Cliente(int id, String nome) {
@@ -20,21 +16,17 @@ public class Cliente extends TextDBRecord {
     private OffsetDateTime createdDate;
 
     @Override
-    public Stream<String> serialize() {
-        String[] appendedData = {
-            nome
-        };
+    public void serialize(ArrayList<String> columns) {
+        super.serialize(columns);
 
-        return Stream.concat (super.serialize ( ), Arrays.stream (appendedData));
+        columns.add(nome);
     }
 
     @Override
-    public void deserialize(Stream<String> columnStream) {
-        super.deserialize (columnStream);
+    public void deserialize(LinkedList<String> columns) {
+        super.deserialize (columns);
 
-        Iterator<String> iterator = columnStream.iterator();
-
-        this.nome = iterator.next();
+        this.nome = columns.removeLast();
     }
 
     @Override
