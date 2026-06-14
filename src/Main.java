@@ -1,25 +1,22 @@
 import Data.Cliente;
-import Data.ClienteSupplier;
 import Data.Clientes;
 import TextDatabases.Exceptions.TextDatabaseException;
 
 public class Main {
-    public static void main(String[] args) {
-        var sup = new ClienteSupplier(0, "");
+    static void main(String[] ignoredArgs) {
         var db = new Clientes("./data/clientes.tsv");
 
         try {
-            db.load( );
+            db.load();
 
-            var cliente = new Cliente(0, "José");
-            db.upsert (cliente);
+            var cliente = new Cliente(0, 0, "José", "R. Antonim do Fofofó, 420", "5555");
+            db.upsert(cliente);
 
-            db.prune ( );
+            db.prune();
 
-            db.save( );
+            db.save();
         } catch (TextDatabaseException e) {
-            System.out.println ("Erro: " + e + " causa: " + e.getCause ( ));
+            System.out.println("Erro: " + e + " causa: " + e.getCause());
         }
     }
 }
-

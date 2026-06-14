@@ -21,7 +21,7 @@ import static TextDatabases.StaticDefaults.FILE_DATE_TIME_FORMATTER;
 
 
 /**
- * Allows the manipulation of TSV text database tables.
+ * Allows the manipulation of a .TSV file as a database table.
  *
  * @param <TRecord> The type of record.
  */
@@ -42,14 +42,14 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
                 "Id",
                 Integer.class,
                 DBRecord::getId,
-                (record, value) -> record.setId((int) value))
+                TextDBUtils.setColumnValue(DBRecord::setId))
         );
 
         columns.add(new DBTableSchemaColumnDefinition(new DateTimeConverter(),
                 "Created Date",
                 OffsetDateTime.class,
                 DBRecord::getCreatedDate,
-                (record, value) -> record.setCreatedDate((OffsetDateTime) value))
+                TextDBUtils.setColumnValue(DBRecord::setCreatedDate))
         );
 
         return new DBTableSchema(columns);

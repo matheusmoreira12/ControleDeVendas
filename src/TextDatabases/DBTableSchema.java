@@ -1,31 +1,12 @@
 package TextDatabases;
 
-import java.util.LinkedList;
 import java.util.List;
 
-public class DBTableSchema {
-    private final List<DBTableSchemaColumnDefinition> columns;
-    private DBTableSchema extendsSchema;
-
+public record DBTableSchema(List<DBTableSchemaColumnDefinition> columns, DBTableSchema extendsSchema) {
     public DBTableSchema(List<DBTableSchemaColumnDefinition> columns) {
-        this.columns = columns;
-        this.extendsSchema = null;
+        this(columns, null);
     }
 
-    public DBTableSchema(List<DBTableSchemaColumnDefinition> columns, DBTableSchema extendsSchema) {
-        this.columns = columns;
-        this.extendsSchema = extendsSchema;
-    }
-
-    public List<DBTableSchemaColumnDefinition> getColumns() {
-        return columns;
-    }
-
-    public DBTableSchema getExtendsSchema() {
-        return extendsSchema;
-    }
-
-    @SuppressWarnings("unchecked")
     public void serialize(DBRecord record, List<String> columnStrs) {
         if (extendsSchema != null)
             extendsSchema.serialize(record, columnStrs);
@@ -37,7 +18,6 @@ public class DBTableSchema {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public void deserialize(DBRecord record, List<String> columnStrs) {
         if (extendsSchema != null)
             extendsSchema.deserialize(record, columnStrs);

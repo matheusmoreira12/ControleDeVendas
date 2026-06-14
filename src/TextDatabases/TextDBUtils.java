@@ -1,15 +1,16 @@
 package TextDatabases;
 
-import java.time.OffsetDateTime;
-
-import static TextDatabases.StaticDefaults.DB_DATETIME_FORMATTER;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 public class TextDBUtils {
-    public static String formatDate(OffsetDateTime date) {
-        return DB_DATETIME_FORMATTER.format (date);
+    @SuppressWarnings("unchecked")
+    public static <TValue, TRecord extends DBRecord> Function<DBRecord, Object> getColumnValue(Function<TRecord, TValue> getter) {
+        return record -> getter.apply((TRecord)record);
     }
 
-    public static OffsetDateTime parseDate(String str) {
-        return OffsetDateTime.from (DB_DATETIME_FORMATTER.parse (str));
+    @SuppressWarnings("unchecked")
+    public static <TValue, TRecord extends DBRecord> BiConsumer<DBRecord, Object> setColumnValue(BiConsumer<TRecord, TValue> setter) {
+        return (record, value) -> setter.accept((TRecord) record, (TValue) value);
     }
 }

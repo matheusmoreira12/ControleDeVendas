@@ -31,11 +31,11 @@ public class DBTableSchemaColumnDefinition {
         return label;
     }
 
-    public Function getGetter() {
+    public Function<DBRecord, Object> getGetter() {
         return getter;
     }
 
-    public BiConsumer getSetter() {
+    public BiConsumer<DBRecord, Object> getSetter() {
         return setter;
     }
 

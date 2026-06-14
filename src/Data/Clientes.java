@@ -1,8 +1,7 @@
 package Data;
 
-import TextDatabases.DBTableSchema;
-import TextDatabases.DBTableSchemaColumnDefinition;
-import TextDatabases.TextDBTable;
+import TextDatabases.*;
+import TextDatabases.ValueConverters.IntegerConverter;
 import TextDatabases.ValueConverters.StringConverter;
 
 import java.util.ArrayList;
@@ -18,11 +17,32 @@ public class Clientes extends TextDBTable<Cliente> {
     protected DBTableSchema getTableSchema() {
         List<DBTableSchemaColumnDefinition> columns = new ArrayList<>();
 
+        columns.add(new DBTableSchemaColumnDefinition(new IntegerConverter(),
+                "Código",
+                Integer.class,
+                TextDBUtils.getColumnValue(Cliente::getCodigo),
+                TextDBUtils.setColumnValue(Cliente::setCodigo))
+        );
+
         columns.add(new DBTableSchemaColumnDefinition(new StringConverter(),
                 "Nome",
                 String.class,
-                record -> ((Cliente) record).getNome(),
-                (record, value) -> ((Cliente) record).setNome((String) value))
+                TextDBUtils.getColumnValue(Cliente::getNome),
+                TextDBUtils.setColumnValue(Cliente::setNome))
+        );
+
+        columns.add(new DBTableSchemaColumnDefinition(new StringConverter(),
+                "Endereço",
+                String.class,
+                TextDBUtils.getColumnValue(Cliente::getEndereco),
+                TextDBUtils.setColumnValue(Cliente::setEndereco))
+        );
+
+        columns.add(new DBTableSchemaColumnDefinition(new StringConverter(),
+                "Telefone",
+                String.class,
+                TextDBUtils.getColumnValue(Cliente::getTelefone),
+                TextDBUtils.setColumnValue(Cliente::setTelefone))
         );
 
         return new DBTableSchema(columns, super.getTableSchema());
@@ -30,6 +50,6 @@ public class Clientes extends TextDBTable<Cliente> {
 
     @Override
     protected Supplier<Cliente> getRecordSupplier() {
-        return new ClienteSupplier(0, "");
+        return new ClienteSupplier();
     }
 }
