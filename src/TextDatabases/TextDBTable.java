@@ -4,6 +4,8 @@ import TextDatabases.Exceptions.TextDatabaseBackupFailedException;
 import TextDatabases.Exceptions.ETextDatabaseReadFailed;
 import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 import TextDatabases.Exceptions.TextDatabaseException;
+import TextDatabases.ValueConverters.DateTimeConverter;
+import TextDatabases.ValueConverters.IntegerConverter;
 
 import java.io.*;
 import java.time.OffsetDateTime;
@@ -17,24 +19,48 @@ import java.util.stream.Stream;
 import static TextDatabases.StaticDefaults.COLUMN_SEPARATOR;
 import static TextDatabases.StaticDefaults.FILE_DATE_TIME_FORMATTER;
 
-/// Allows the manipulation of TSV text databases
-public class TextDatabase<TRecord extends TextDBRecord> {
+
+/**
+ * Allows the manipulation of TSV text database tables.
+ *
+ * @param <TRecord> The type of record.
+ */
+public abstract class TextDBTable<TRecord extends DBRecord> {
     private final String fileName;
 
     private final ArrayList<TRecord> records;
 
-    private final Supplier<TRecord> recordSupplier;
-
-    public TextDatabase(String fileName, Supplier<TRecord> recordSupplier) {
+    public TextDBTable(String fileName) {
         this.fileName = fileName;
-        this.recordSupplier = recordSupplier;
         this.records = new ArrayList<>();
     }
 
+    protected DBTableSchema<TRecord> getTableSchema() {
+        List<DBTableSchemaColumnDefinition<?, TRecord>> columns = new ArrayList<>();
+
+        columns.add(new DBTableSchemaColumnDefinition<>(new IntegerConverter(),
+                "Id",
+                DBRecord::getId,
+                DBRecord::setId)
+        );
+
+        columns.add(new DBTableSchemaColumnDefinition<>(new DateTimeConverter(),
+                "Created Date",
+                DBRecord::getCreatedDate,
+                DBRecord::setCreatedDate)
+        );
+
+        return new DBTableSchema<>(columns);
+    }
+
+    protected abstract Supplier<TRecord> getRecordSupplier();
+
     /**
+     * Loads data from a file.
+     *
      * @throws TextDatabaseException when reading fails.
      */
-    public void loadFromDisc() throws TextDatabaseException {
+    public void load() throws TextDatabaseException {
         File file = new File(fileName);
 
         try {
@@ -63,7 +89,7 @@ public class TextDatabase<TRecord extends TextDBRecord> {
             if (line.isBlank())
                 continue;
 
-            TRecord record = recordSupplier.get();
+            TRecord record = getRecordSupplier().get();
 
             LinkedList<String> columns = new LinkedList<>(Arrays.asList(line.split(COLUMN_SEPARATOR)));
             record.deserialize(columns);
@@ -81,7 +107,7 @@ public class TextDatabase<TRecord extends TextDBRecord> {
         for (var entry : groupedById.entrySet()) {
             var duplicates = entry.getValue();
 
-            duplicates.sort(Comparator.comparing(TextDBRecord::getCreatedDate));
+            duplicates.sort(Comparator.comparing(DBRecord::getCreatedDate));
 
             // Delete all old duplicates
             for (int i = 0; i < duplicates.size() - 1; i++)
@@ -92,7 +118,7 @@ public class TextDatabase<TRecord extends TextDBRecord> {
     /**
      * @throws TextDatabaseException if saving fails.
      */
-    public void saveToDisc() throws TextDatabaseException {
+    public void save() throws TextDatabaseException {
         try {
             String salt = String.format("%07d", (int) (Math.random() * 1000000));
             OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
@@ -220,6 +246,6 @@ public class TextDatabase<TRecord extends TextDBRecord> {
 
     private Map<Integer, List<TRecord>> getRecordsGroupedById() {
         return records.stream()
-                .collect(Collectors.groupingBy(TextDBRecord::getId));
+                .collect(Collectors.groupingBy(DBRecord::getId));
     }
 }

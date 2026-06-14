@@ -4,12 +4,21 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public abstract class TextDBRecord {
+/**
+ * Represents a record in a text DB table.
+ */
+public abstract class DBRecord {
     private OffsetDateTime createdDate;
     private int id;
 
-    public TextDBRecord() {
+    public DBRecord(int id) {
+        this.id = id;
         this.createdDate = OffsetDateTime.now();
+    }
+
+    public DBRecord(int id, OffsetDateTime createdDate) {
+        this.id = id;
+        this.createdDate = createdDate;
     }
 
     public void serialize(ArrayList<String> columns) {
@@ -26,7 +35,15 @@ public abstract class TextDBRecord {
         return createdDate;
     }
 
+    public void setCreatedDate(OffsetDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
     public int getId() {
         return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 }

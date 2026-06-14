@@ -1,3 +1,5 @@
+package Data;
+
 import java.util.function.Supplier;
 
 public class ClienteSupplier implements Supplier<Cliente> {

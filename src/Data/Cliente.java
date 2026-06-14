@@ -1,19 +1,17 @@
-import TextDatabases.TextDBRecord;
+package Data;
 
-import java.time.OffsetDateTime;
+import TextDatabases.DBRecord;
+
 import java.util.*;
 
-public class Cliente extends TextDBRecord {
+public class Cliente extends DBRecord {
     public Cliente(int id, String nome) {
-        this.id = id;
-        this.nome = nome;
+        super(id);
 
-        createdDate = OffsetDateTime.now ( );
+        this.nome = nome;
     }
 
-    private int id;
     private String nome;
-    private OffsetDateTime createdDate;
 
     @Override
     public void serialize(ArrayList<String> columns) {
@@ -29,17 +27,11 @@ public class Cliente extends TextDBRecord {
         this.nome = columns.removeLast();
     }
 
-    @Override
-    public OffsetDateTime getCreatedDate() {
-        return createdDate;
-    }
-
-    @Override
-    public int getId() {
-        return id;
-    }
-
     public String getNome() {
         return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 }
