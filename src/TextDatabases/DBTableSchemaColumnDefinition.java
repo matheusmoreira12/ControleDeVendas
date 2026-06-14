@@ -1,25 +1,29 @@
 package TextDatabases;
 
+import java.lang.reflect.Type;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class DBTableSchemaColumnDefinition<TValue, TRecord extends DBRecord> {
-    public DBTableSchemaColumnDefinition(DBColumnConverter<TValue> converter,
+public class DBTableSchemaColumnDefinition {
+    public DBTableSchemaColumnDefinition(DBColumnConverter converter,
                                          String label,
-                                         Function<TRecord, TValue> getter,
-                                         BiConsumer<TRecord, TValue> setter) {
+                                         Type valueType,
+                                         Function<DBRecord, Object> getter,
+                                         BiConsumer<DBRecord, Object> setter) {
         this.converter = converter;
         this.label = label;
+        this.valueType = valueType;
         this.getter = getter;
         this.setter = setter;
     }
 
-    public DBColumnConverter<TValue> converter;
+    public DBColumnConverter converter;
     public String label;
-    private final Function<TRecord, TValue> getter;
-    private final BiConsumer<TRecord, TValue> setter;
+    private final Type valueType;
+    private final Function<DBRecord, Object> getter;
+    private final BiConsumer<DBRecord, Object> setter;
 
-    public DBColumnConverter<TValue> getConverter() {
+    public DBColumnConverter getConverter() {
         return converter;
     }
 
@@ -27,11 +31,15 @@ public class DBTableSchemaColumnDefinition<TValue, TRecord extends DBRecord> {
         return label;
     }
 
-    public Function<TRecord, TValue> getGetter() {
+    public Function getGetter() {
         return getter;
     }
 
-    public BiConsumer<TRecord, TValue> getSetter() {
+    public BiConsumer getSetter() {
         return setter;
+    }
+
+    public Type getValueType() {
+        return valueType;
     }
 }

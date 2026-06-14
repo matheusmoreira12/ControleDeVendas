@@ -35,22 +35,24 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
         this.records = new ArrayList<>();
     }
 
-    protected DBTableSchema<TRecord> getTableSchema() {
-        List<DBTableSchemaColumnDefinition<?, TRecord>> columns = new ArrayList<>();
+    protected DBTableSchema getTableSchema() {
+        List<DBTableSchemaColumnDefinition> columns = new ArrayList<>();
 
-        columns.add(new DBTableSchemaColumnDefinition<>(new IntegerConverter(),
+        columns.add(new DBTableSchemaColumnDefinition(new IntegerConverter(),
                 "Id",
+                Integer.class,
                 DBRecord::getId,
-                DBRecord::setId)
+                (record, value) -> record.setId((int) value))
         );
 
-        columns.add(new DBTableSchemaColumnDefinition<>(new DateTimeConverter(),
+        columns.add(new DBTableSchemaColumnDefinition(new DateTimeConverter(),
                 "Created Date",
+                OffsetDateTime.class,
                 DBRecord::getCreatedDate,
-                DBRecord::setCreatedDate)
+                (record, value) -> record.setCreatedDate((OffsetDateTime) value))
         );
 
-        return new DBTableSchema<>(columns);
+        return new DBTableSchema(columns);
     }
 
     protected abstract Supplier<TRecord> getRecordSupplier();
@@ -91,8 +93,8 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
 
             TRecord record = getRecordSupplier().get();
 
-            LinkedList<String> columns = new LinkedList<>(Arrays.asList(line.split(COLUMN_SEPARATOR)));
-            record.deserialize(columns);
+            LinkedList<String> columnStrs = new LinkedList<>(Arrays.asList(line.split(COLUMN_SEPARATOR)));
+            this.getTableSchema().deserialize(record, columnStrs);
 
             records.add(record);
         }
@@ -102,7 +104,7 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
      * Removes old duplicates from the internal storage.
      */
     public void prune() {
-        Map<Integer, List<TRecord>> groupedById = getRecordsGroupedById();
+        Map<Integer, List<TRecord>> groupedById = groupRecordsById();
 
         for (var entry : groupedById.entrySet()) {
             var duplicates = entry.getValue();
@@ -133,10 +135,10 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 
             for (var record : records) {
-                ArrayList<String> columns = new ArrayList<>();
-                record.serialize(columns);
+                List<String> columnStrs = new ArrayList<>();
+                this.getTableSchema().serialize(record, columnStrs);
 
-                String recordStr = String.join(COLUMN_SEPARATOR, columns);
+                String recordStr = String.join(COLUMN_SEPARATOR, columnStrs);
                 writer.write(recordStr);
 
                 writer.newLine();
@@ -230,7 +232,7 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
     }
 
     private Stream<TRecord> getAll() {
-        var groupedById = getRecordsGroupedById();
+        var groupedById = groupRecordsById();
 
         // Return only most recent data
         return groupedById.keySet().stream().map(k -> {
@@ -244,7 +246,7 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
         });
     }
 
-    private Map<Integer, List<TRecord>> getRecordsGroupedById() {
+    private Map<Integer, List<TRecord>> groupRecordsById() {
         return records.stream()
                 .collect(Collectors.groupingBy(DBRecord::getId));
     }

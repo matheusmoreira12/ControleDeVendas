@@ -5,14 +5,14 @@ import TextDatabases.StaticDefaults;
 
 import java.time.OffsetDateTime;
 
-public class DateTimeConverter extends DBColumnConverter<OffsetDateTime> {
+public class DateTimeConverter extends DBColumnConverter {
     @Override
-    public OffsetDateTime convert(String value) {
+    public Object convert(String value) {
         return OffsetDateTime.from(StaticDefaults.DB_DATETIME_FORMATTER.parse(value));
     }
 
     @Override
-    public String convertBack(OffsetDateTime value) {
-        return StaticDefaults.DB_DATETIME_FORMATTER.format(value);
+    public String convertBack(Object value) {
+        return StaticDefaults.DB_DATETIME_FORMATTER.format((OffsetDateTime)value);
     }
 }

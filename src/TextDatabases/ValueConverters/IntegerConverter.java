@@ -2,14 +2,14 @@ package TextDatabases.ValueConverters;
 
 import TextDatabases.DBColumnConverter;
 
-public class IntegerConverter extends DBColumnConverter<Integer> {
+public class IntegerConverter extends DBColumnConverter {
     @Override
-    public Integer convert(String value) {
+    public Object convert(String value) {
         return Integer.parseInt(value);
     }
 
     @Override
-    public String convertBack(Integer value) {
-        return Integer.toString(value);
+    public String convertBack(Object value) {
+        return Integer.toString((Integer) value);
     }
 }

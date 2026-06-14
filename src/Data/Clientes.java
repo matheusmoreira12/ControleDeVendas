@@ -15,16 +15,17 @@ public class Clientes extends TextDBTable<Cliente> {
     }
 
     @Override
-    protected DBTableSchema<Cliente> getTableSchema() {
-        List<DBTableSchemaColumnDefinition<?, Cliente>> columns = new ArrayList<>();
+    protected DBTableSchema getTableSchema() {
+        List<DBTableSchemaColumnDefinition> columns = new ArrayList<>();
 
-        columns.add(new DBTableSchemaColumnDefinition<>(new StringConverter(),
+        columns.add(new DBTableSchemaColumnDefinition(new StringConverter(),
                 "Nome",
-                Cliente::getNome,
-                Cliente::setNome)
+                String.class,
+                record -> ((Cliente) record).getNome(),
+                (record, value) -> ((Cliente) record).setNome((String) value))
         );
 
-        return new DBTableSchema<Cliente>(columns, super.getTableSchema());
+        return new DBTableSchema(columns, super.getTableSchema());
     }
 
     @Override

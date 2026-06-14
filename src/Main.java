@@ -12,7 +12,7 @@ public class Main {
             db.load( );
 
             var cliente = new Cliente(0, "José");
-            db.insert (cliente);
+            db.upsert (cliente);
 
             db.prune ( );
 

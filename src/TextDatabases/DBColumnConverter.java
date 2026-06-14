@@ -1,6 +1,6 @@
 package TextDatabases;
 
-public abstract class DBColumnConverter<T> {
-    public abstract T convert(String value);
-    public abstract String convertBack(T value);
+public abstract class DBColumnConverter {
+    public abstract Object convert(String value);
+    public abstract String convertBack(Object value);
 }
