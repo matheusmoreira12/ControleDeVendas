@@ -35,22 +35,20 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
         this.records = new ArrayList<>();
     }
 
-    protected DBTableSchema getTableSchema() {
-        List<DBTableSchemaColumnDefinition> columns = new ArrayList<>();
+    public DBTableSchema getSchema() {
+        List<DBColumnDefinitionBase> columns = new ArrayList<>();
 
-        columns.add(new DBTableSchemaColumnDefinition(new IntegerConverter(),
-                "Id",
+        columns.add(new DBColumnDefinition("id",
+                new IntegerConverter(),
                 Integer.class,
                 DBRecord::getId,
-                TextDBUtils.setColumnValue(DBRecord::setId))
-        );
+                TextDBUtils.setColumnValue(DBRecord::setId)));
 
-        columns.add(new DBTableSchemaColumnDefinition(new DateTimeConverter(),
-                "Created Date",
+        columns.add(new DBColumnDefinition("createdDate",
+                new DateTimeConverter(),
                 OffsetDateTime.class,
                 DBRecord::getCreatedDate,
-                TextDBUtils.setColumnValue(DBRecord::setCreatedDate))
-        );
+                TextDBUtils.setColumnValue(DBRecord::setCreatedDate)));
 
         return new DBTableSchema(columns);
     }
@@ -94,7 +92,7 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
             TRecord record = getRecordSupplier().get();
 
             LinkedList<String> columnStrs = new LinkedList<>(Arrays.asList(line.split(COLUMN_SEPARATOR)));
-            this.getTableSchema().deserialize(record, columnStrs);
+            this.getSchema().deserialize(record, columnStrs);
 
             records.add(record);
         }
@@ -136,7 +134,7 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
 
             for (var record : records) {
                 List<String> columnStrs = new ArrayList<>();
-                this.getTableSchema().serialize(record, columnStrs);
+                this.getSchema().serialize(record, columnStrs);
 
                 String recordStr = String.join(COLUMN_SEPARATOR, columnStrs);
                 writer.write(recordStr);
