@@ -7,13 +7,13 @@ import java.time.OffsetDateTime;
 public class Main {
     static void main(String[] ignoredArgs) {
         try {
-            var clients = new Clients("./data/clientes.tsv");
+            var clients = new Clients("./data/clientes.mattdb");
             clients.load();
 
-            var products = new Products("./data/produtos.tsv");
+            var products = new Products("./data/produtos.mattdb");
             products.load();
 
-            var sales = new Sales("./data/vendas.tsv", clients, products);
+            var sales = new Sales("./data/vendas.mattdb", clients, products);
             products.load();
 
             var client = new Client(0, "José", "R. Antonim do Fofofó, 420", "5555");

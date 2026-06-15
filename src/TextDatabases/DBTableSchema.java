@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static TextDatabases.StaticDefaults.ID_LIST_SEPARATOR;
+
 public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema extendsSchema) {
     public DBTableSchema(List<DBColumnDefinitionBase> columns) {
         this(columns, null);
@@ -50,7 +52,7 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
                     .map(i -> Integer.toString(i))
                     .toList();
 
-            return String.join(",", valuesStr);
+            return String.join(ID_LIST_SEPARATOR, valuesStr);
         } else
             throw new RuntimeException();
     }
@@ -87,7 +89,7 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
     }
 
     private Object deserializeManyRelation(String valueStr, DBManyRelation manyRelation) {
-        Stream<Integer> ids = Arrays.stream(valueStr.split(","))
+        Stream<Integer> ids = Arrays.stream(valueStr.split(ID_LIST_SEPARATOR))
                 .map(Integer::parseInt);
 
         return ids.map(id -> manyRelation
