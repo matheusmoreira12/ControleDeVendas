@@ -3,6 +3,7 @@ import TextDatabases.Exceptions.TextDatabaseException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 
 public class Main {
     static void main(String[] ignoredArgs) {
@@ -14,7 +15,7 @@ public class Main {
             products.load();
 
             var sales = new Sales("./data/vendas.mattdb", clients, products);
-            products.load();
+            sales.load();
 
             var client = new Client(0, "José", "R. Antonim do Fofofó, 420", "5555");
             clients.upsert(client);
@@ -22,16 +23,19 @@ public class Main {
             var product = new Product(0, "056104610", "Borracha Escolar", BigDecimal.valueOf(15.00));
             products.upsert(product);
 
-            var sale = new Sale(0, OffsetDateTime.now(), client, new Product[] { product }, SaleKind.Cash);
+            var sale = new Sale(0, OffsetDateTime.now(), client, SaleKind.Cash);
             sales.upsert(sale);
 
-            clients.prune();
+            sale.getItems().add(product);
+            sale.getItems().add(product);
+            sale.getItems().add(product);
+            sale.getItems().add(product);
+            sale.getItems().add(product);
+
             clients.save();
 
-            products.prune();
             products.save();
 
-            sales.prune();
             sales.save();
         } catch (TextDatabaseException e) {
             System.out.println("Erro: " + e + " causa: " + e.getCause());

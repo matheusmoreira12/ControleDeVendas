@@ -35,26 +35,19 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
     }
 
     public String serializeRelation(DBRecord record, DBRelation relation) {
-        var obj = relation.getGetter().apply(record);
-
-        if (obj instanceof DBRecord rec)
-            return Integer.toString(rec.getId());
-        else
-            throw new RuntimeException();
+        var rec = (DBRecord) relation.getGetter().apply(record);
+        return Integer.toString(rec.getId());
     }
 
     public String serializeManyRelation(DBRecord record, DBManyRelation relation) {
-        var obj = relation.getGetter().apply(record);
+        var list = relation.getListAccessor().apply(record);
 
-        if (obj instanceof DBRecord[] recs) {
-            List<String> valuesStr = Arrays.stream(recs)
-                    .map(DBRecord::getId)
-                    .map(i -> Integer.toString(i))
-                    .toList();
+        List<String> valuesStr = list.stream()
+                .map(DBRecord::getId)
+                .map(i -> Integer.toString(i))
+                .toList();
 
-            return String.join(ID_LIST_SEPARATOR, valuesStr);
-        } else
-            throw new RuntimeException();
+        return String.join(ID_LIST_SEPARATOR, valuesStr);
     }
 
     public void deserialize(DBRecord record, List<String> columnStrs) {
@@ -63,41 +56,46 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
 
         for (var column : columns) {
             var valueStr = columnStrs.removeFirst();
-            Object value;
 
             switch (column) {
-                case DBColumnDefinition def -> value = deserializeColumn(valueStr, def);
-                case DBRelation rel -> value = deserializeRelation(valueStr, rel);
-                case DBManyRelation mRel -> value = deserializeManyRelation(valueStr, mRel);
+                case DBColumnDefinition def -> deserializeColumn(record, valueStr, def);
+                case DBRelation rel -> deserializeRelation(record, valueStr, rel);
+                case DBManyRelation mRel -> deserializeManyRelation(record, valueStr, mRel);
                 case null, default -> throw new RuntimeException();
             }
-
-            column.getSetter().accept(record, value);
         }
     }
 
-    private Object deserializeColumn(String valueStr, DBColumnDefinition column) {
-        return column.getConverter().convert(valueStr);
+    private void deserializeColumn(DBRecord record, String valueStr, DBColumnDefinition column) {
+        var value = column.getConverter().convert(valueStr);
+        column.getSetter().accept(record, value);
     }
 
-    private Object deserializeRelation(String valueStr, DBRelation relation) {
+    private void deserializeRelation(DBRecord record, String valueStr, DBRelation relation) {
         int id = Integer.parseInt(valueStr);
-        return relation.getTable()
+        var relRecord = relation.getTable()
                 .select(r -> r.getId() == id)
                 .findFirst()
                 .orElseThrow();
+
+        relation.getSetter().accept(record, relRecord);
     }
 
-    private Object deserializeManyRelation(String valueStr, DBManyRelation manyRelation) {
+    @SuppressWarnings("unchecked")
+    private void deserializeManyRelation(DBRecord record, String valueStr, DBManyRelation manyRelation) {
         Stream<Integer> ids = Arrays.stream(valueStr.split(ID_LIST_SEPARATOR))
                 .map(Integer::parseInt);
 
-        return ids.map(id -> manyRelation
+        var relRecords = ids.map(id -> manyRelation
                         .getTable()
                         .select(r -> r.getId() == id)
                         .findFirst()
                         .orElseThrow())
-                .toArray();
+                .toList();
+
+        var list = manyRelation.getListAccessor().apply(record);
+        list.clear();
+        list.addAll(relRecords);
     }
 
 }

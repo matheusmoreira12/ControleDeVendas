@@ -120,9 +120,8 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
      */
     public void save() throws TextDatabaseException {
         try {
-            String salt = String.format("%07d", (int) (Math.random() * 1000000));
             OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
-            String oldFileName = fileName + "_" + nowUtc.format(FILE_DATE_TIME_FORMATTER) + "_" + salt;
+            String oldFileName = fileName + "_" + nowUtc.format(FILE_DATE_TIME_FORMATTER);
             File old = new File(oldFileName);
 
             File file = new File(fileName);

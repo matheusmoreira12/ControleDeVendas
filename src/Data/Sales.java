@@ -20,7 +20,7 @@ public class Sales extends TextDBTable<Sale> {
 
     @Override
     protected Supplier<Sale> getRecordSupplier() {
-        return () -> new Sale(0, null, null, null, null);
+        return () -> new Sale(0, null, null, null);
     }
 
     @Override
@@ -38,15 +38,14 @@ public class Sales extends TextDBTable<Sale> {
                 "client",
                 clientsTable,
                 Client.class,
-                TextDBUtils.getColumnValue(Sale::getClient),
-                TextDBUtils.setColumnValue(Sale::setClient)));
+                TextDBUtils.getRelationValue(Sale::getClient),
+                TextDBUtils.setRelationValue(Sale::setClient)));
 
         columns.add(new DBManyRelation(
                 "items",
                 productsTable,
                 Product.class,
-                TextDBUtils.getColumnValue(Sale::getItems),
-                TextDBUtils.setColumnValue(Sale::setItems)));
+                TextDBUtils.getManyRelationList(Sale::getItems)));
 
         return new DBTableSchema(columns, super.getSchema());
     }

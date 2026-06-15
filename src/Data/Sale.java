@@ -3,19 +3,21 @@ package Data;
 import TextDatabases.DBRecord;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Sale extends DBRecord {
     private OffsetDateTime soldDate;
-    private Product[] items;
-    private SaleKind type;
+    private final List<Product> items;
+    private SaleKind kind;
     private Client client;
 
-    public Sale(int id, OffsetDateTime soldDate, Client client, Product[] items, SaleKind kind) {
+    public Sale(int id, OffsetDateTime soldDate, Client client, SaleKind kind) {
         super(id);
         this.soldDate = soldDate;
         this.client = client;
-        this.items = items;
-        this.type = kind;
+        this.items = new ArrayList<>();
+        this.kind = kind;
     }
 
     public OffsetDateTime getSoldDate() {
@@ -34,20 +36,16 @@ public class Sale extends DBRecord {
         this.client = client;
     }
 
-    public Product[] getItems() {
+    public List<Product> getItems() {
         return items;
     }
 
-    public void setItems(Product[] items) {
-        this.items = items;
+    public SaleKind getKind() {
+        return kind;
     }
 
-    public SaleKind getType() {
-        return type;
-    }
-
-    public void setType(SaleKind type) {
-        this.type = type;
+    public void setKind(SaleKind kind) {
+        this.kind = kind;
     }
 }
 
