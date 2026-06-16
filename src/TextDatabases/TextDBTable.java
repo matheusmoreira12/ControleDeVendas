@@ -4,8 +4,8 @@ import TextDatabases.Exceptions.TextDatabaseBackupFailedException;
 import TextDatabases.Exceptions.ETextDatabaseReadFailed;
 import TextDatabases.Exceptions.ETextDatabaseWriteFailed;
 import TextDatabases.Exceptions.TextDatabaseException;
-import TextDatabases.ValueConverters.DateTimeConverter;
-import TextDatabases.ValueConverters.IntegerConverter;
+import TextDatabases.ValueConverters.DateTimeParserFormatter;
+import TextDatabases.ValueConverters.IntegerParserFormatter;
 
 import java.io.*;
 import java.time.OffsetDateTime;
@@ -39,21 +39,21 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
         List<DBColumnDefinitionBase> columns = new ArrayList<>();
 
         columns.add(new DBColumnDefinition("id",
-                new IntegerConverter(),
-                Integer.class,
+                new IntegerParserFormatter(),
+                int.class,
                 DBRecord::getId,
-                TextDBUtils.setColumnValue(DBRecord::setId)));
+                DBUtils.setColumnValue(DBRecord::setId)));
 
         columns.add(new DBColumnDefinition("createdDate",
-                new DateTimeConverter(),
+                new DateTimeParserFormatter(),
                 OffsetDateTime.class,
                 DBRecord::getCreatedDate,
-                TextDBUtils.setColumnValue(DBRecord::setCreatedDate)));
+                DBUtils.setColumnValue(DBRecord::setCreatedDate)));
 
         return new DBTableSchema(columns);
     }
 
-    protected abstract Supplier<TRecord> getRecordSupplier();
+    public abstract Supplier<TRecord> getRecordSupplier();
 
     /**
      * Loads data from a file.
@@ -246,5 +246,10 @@ public abstract class TextDBTable<TRecord extends DBRecord> {
     private Map<Integer, List<TRecord>> groupRecordsById() {
         return records.stream()
                 .collect(Collectors.groupingBy(DBRecord::getId));
+    }
+
+    public int getUniqueId() {
+        int lastId = getAll().map(DBRecord::getId).max(Integer::compareTo).orElse(-1);
+        return lastId + 1;
     }
 }

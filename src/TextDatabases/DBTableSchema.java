@@ -2,11 +2,21 @@ package TextDatabases;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import static TextDatabases.StaticDefaults.ID_LIST_SEPARATOR;
 
-public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema extendsSchema) {
+@SuppressWarnings("ClassCanBeRecord")
+public final class DBTableSchema {
+    private final List<DBColumnDefinitionBase> columns;
+    private final DBTableSchema extendsSchema;
+
+    public DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema extendsSchema) {
+        this.columns = columns;
+        this.extendsSchema = extendsSchema;
+    }
+
     public DBTableSchema(List<DBColumnDefinitionBase> columns) {
         this(columns, null);
     }
@@ -29,17 +39,17 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
         }
     }
 
-    public String serializeColumn(DBRecord record, DBColumnDefinition column) {
-        var value = column.getGetter().apply(record);
-        return column.getConverter().convertBack(value);
+    private String serializeColumn(DBRecord record, DBColumnDefinition column) {
+        var value = column.getAccessor().apply(record);
+        return column.getParserFormatter().format(value);
     }
 
-    public String serializeRelation(DBRecord record, DBRelation relation) {
-        var rec = (DBRecord) relation.getGetter().apply(record);
-        return Integer.toString(rec.getId());
+    private String serializeRelation(DBRecord record, DBRelation relation) {
+        var relRecord = relation.getAccessor().apply(record);
+        return Integer.toString(relRecord.getId());
     }
 
-    public String serializeManyRelation(DBRecord record, DBManyRelation relation) {
+    private String serializeManyRelation(DBRecord record, DBManyRelation relation) {
         var list = relation.getListAccessor().apply(record);
 
         List<String> valuesStr = list.stream()
@@ -67,35 +77,72 @@ public record DBTableSchema(List<DBColumnDefinitionBase> columns, DBTableSchema 
     }
 
     private void deserializeColumn(DBRecord record, String valueStr, DBColumnDefinition column) {
-        var value = column.getConverter().convert(valueStr);
-        column.getSetter().accept(record, value);
+        var value = column.getParserFormatter().parse(valueStr);
+        column.getModifier().accept(record, value);
     }
 
     private void deserializeRelation(DBRecord record, String valueStr, DBRelation relation) {
         int id = Integer.parseInt(valueStr);
+
         var relRecord = relation.getTable()
-                .select(r -> r.getId() == id)
+                .select(DBUtils.selectMatchingId(id))
                 .findFirst()
                 .orElseThrow();
 
-        relation.getSetter().accept(record, relRecord);
+        relation.getModifier().accept(record, relRecord);
     }
 
-    @SuppressWarnings("unchecked")
-    private void deserializeManyRelation(DBRecord record, String valueStr, DBManyRelation manyRelation) {
+    private void deserializeManyRelation(DBRecord record, String valueStr, DBManyRelation relation) {
         Stream<Integer> ids = Arrays.stream(valueStr.split(ID_LIST_SEPARATOR))
                 .map(Integer::parseInt);
 
-        var relRecords = ids.map(id -> manyRelation
-                        .getTable()
-                        .select(r -> r.getId() == id)
+        var table = relation.getTable();
+        var relRecords = ids.map(id -> table
+                        .select(DBUtils.selectMatchingId(id))
                         .findFirst()
                         .orElseThrow())
                 .toList();
 
-        var list = manyRelation.getListAccessor().apply(record);
+        var list = relation.getListAccessor().apply(record);
         list.clear();
         list.addAll(relRecords);
+    }
+
+
+    public Stream<DBColumnDefinitionBase> resolveColumns() {
+        if (extendsSchema != null)
+            return Stream.concat(extendsSchema.resolveColumns(), columns.stream());
+
+        return columns.stream();
+    }
+
+    public List<DBColumnDefinitionBase> getColumns() {
+        return columns;
+    }
+
+    public DBTableSchema extendsSchema() {
+        return extendsSchema;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (DBTableSchema) obj;
+        return Objects.equals(this.columns, that.columns) &&
+                Objects.equals(this.extendsSchema, that.extendsSchema);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(columns, extendsSchema);
+    }
+
+    @Override
+    public String toString() {
+        return "DBTableSchema[" +
+                "columns=" + columns + ", " +
+                "extendsSchema=" + extendsSchema + ']';
     }
 
 }

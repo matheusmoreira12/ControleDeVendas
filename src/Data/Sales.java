@@ -1,8 +1,10 @@
 package Data;
 
 import TextDatabases.*;
-import TextDatabases.ValueConverters.DateTimeConverter;
+import TextDatabases.ValueConverters.DateTimeParserFormatter;
+import TextDatabases.ValueConverters.StringParserFormatter;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -19,8 +21,8 @@ public class Sales extends TextDBTable<Sale> {
     }
 
     @Override
-    protected Supplier<Sale> getRecordSupplier() {
-        return () -> new Sale(0, null, null, null);
+    public Supplier<Sale> getRecordSupplier() {
+        return () -> new Sale(getUniqueId(), null, null, null);
     }
 
     @Override
@@ -29,23 +31,31 @@ public class Sales extends TextDBTable<Sale> {
 
         columns.add(new DBColumnDefinition(
                 "soldDate",
-                new DateTimeConverter(),
-                String.class,
-                TextDBUtils.getColumnValue(Sale::getSoldDate),
-                TextDBUtils.setColumnValue(Sale::setSoldDate)));
+                new DateTimeParserFormatter(),
+                LocalDate.class,
+                DBUtils.getColumnValue(Sale::getSoldDate),
+                DBUtils.setColumnValue(Sale::setSoldDate)));
 
         columns.add(new DBRelation(
                 "client",
                 clientsTable,
                 Client.class,
-                TextDBUtils.getRelationValue(Sale::getClient),
-                TextDBUtils.setRelationValue(Sale::setClient)));
+                DBUtils.getRelationValue(Sale::getClient),
+                DBUtils.setRelationValue(Sale::setClient)));
 
         columns.add(new DBManyRelation(
                 "items",
                 productsTable,
-                Product.class,
-                TextDBUtils.getManyRelationList(Sale::getItems)));
+                SaleItem.class,
+                DBUtils.getManyRelationList(Sale::getItems)
+        ));
+
+        columns.add(new DBColumnDefinition(
+                "kind",
+                new StringParserFormatter(),
+                SaleKind.class,
+                record -> ((Sale) record).getKind().toString(),
+                (record, value) -> ((Sale) record).setKind(SaleKind.valueOf((String) value))));
 
         return new DBTableSchema(columns, super.getSchema());
     }

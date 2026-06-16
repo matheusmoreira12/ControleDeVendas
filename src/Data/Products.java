@@ -1,8 +1,8 @@
 package Data;
 
 import TextDatabases.*;
-import TextDatabases.ValueConverters.DecimalConverter;
-import TextDatabases.ValueConverters.StringConverter;
+import TextDatabases.ValueConverters.DecimalParserFormatter;
+import TextDatabases.ValueConverters.StringParserFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +14,8 @@ public class Products extends TextDBTable<Product> {
     }
 
     @Override
-    protected Supplier<Product> getRecordSupplier() {
-        return () -> new Product(0, null, null, null);
+    public Supplier<Product> getRecordSupplier() {
+        return () -> new Product(getUniqueId(), null, null, null);
     }
 
     @Override
@@ -23,22 +23,22 @@ public class Products extends TextDBTable<Product> {
         List<DBColumnDefinitionBase> columns = new ArrayList<>();
 
         columns.add(new DBColumnDefinition("code",
-                new StringConverter(),
+                new StringParserFormatter(),
                 String.class,
-                TextDBUtils.getColumnValue(Product::getCode),
-                TextDBUtils.setColumnValue(Product::setCode)));
+                DBUtils.getColumnValue(Product::getCode),
+                DBUtils.setColumnValue(Product::setCode)));
 
         columns.add(new DBColumnDefinition("description",
-                new StringConverter(),
+                new StringParserFormatter(),
                 String.class,
-                TextDBUtils.getColumnValue(Product::getDescription),
-                TextDBUtils.setColumnValue(Product::setDescription)));
+                DBUtils.getColumnValue(Product::getDescription),
+                DBUtils.setColumnValue(Product::setDescription)));
 
         columns.add(new DBColumnDefinition("price",
-                new DecimalConverter(),
+                new DecimalParserFormatter(),
                 String.class,
-                TextDBUtils.getColumnValue(Product::getPrice),
-                TextDBUtils.setColumnValue(Product::setPrice)));
+                DBUtils.getColumnValue(Product::getPrice),
+                DBUtils.setColumnValue(Product::setPrice)));
 
         return new DBTableSchema(columns, super.getSchema());
     }

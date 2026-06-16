@@ -2,17 +2,18 @@ package Data;
 
 import TextDatabases.DBRecord;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Sale extends DBRecord {
-    private OffsetDateTime soldDate;
-    private final List<Product> items;
+    private LocalDate soldDate;
+    private final List<SaleItem> items;
     private SaleKind kind;
     private Client client;
 
-    public Sale(int id, OffsetDateTime soldDate, Client client, SaleKind kind) {
+    public Sale(int id, LocalDate soldDate, Client client, SaleKind kind) {
         super(id);
         this.soldDate = soldDate;
         this.client = client;
@@ -20,11 +21,11 @@ public class Sale extends DBRecord {
         this.kind = kind;
     }
 
-    public OffsetDateTime getSoldDate() {
+    public LocalDate getSoldDate() {
         return soldDate;
     }
 
-    public void setSoldDate(OffsetDateTime soldDate) {
+    public void setSoldDate(LocalDate soldDate) {
         this.soldDate = soldDate;
     }
 
@@ -36,7 +37,7 @@ public class Sale extends DBRecord {
         this.client = client;
     }
 
-    public List<Product> getItems() {
+    public List<SaleItem> getItems() {
         return items;
     }
 
