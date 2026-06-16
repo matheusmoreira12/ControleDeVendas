@@ -2,16 +2,15 @@ import Data.*;
 import Printers.TabularDataPrinter;
 import TextDatabases.*;
 import TextDatabases.Exceptions.TextDatabaseException;
+import TextDatabases.ValueConverters.EnumUtils;
 
-import javax.swing.text.DateFormatter;
+import java.io.Console;
 import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Scanner;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 import java.util.function.Function;
 
 import static TextDatabases.StaticDefaults.ID_LIST_SEPARATOR;
@@ -24,7 +23,7 @@ public class Main {
     private static Products products;
     private static Sales sales;
     private static SaleItems saleItems;
-    private static Map<String, String> substitutionsMap;
+    private static Map<String, String> substitutions;
     private static Map<TextDBTable<?>, TabularDataPrinter<?>> printers;
     private static Map<Type, Function<String, Object>> customParsers;
     private static Map<Type, Function<Object, String>> customFormatters;
@@ -49,7 +48,7 @@ public class Main {
             customParsers = Map.of(OffsetDateTime.class, Main::parseDateTime,
                     LocalDate.class, Main::parseDate);
 
-            substitutionsMap = Map.ofEntries(
+            substitutions = Map.ofEntries(
                     Map.entry("client", "Cliente"),
                     Map.entry("name", "Nome"),
                     Map.entry("address", "Endereço"),
@@ -65,24 +64,24 @@ public class Main {
 
             var clientsPrinter = new TabularDataPrinter<>(
                     clients,
-                    substitutionsMap,
+                    substitutions,
                     customFormatters);
 
             var productsPrinter = new TabularDataPrinter<>(
                     products,
-                    substitutionsMap,
+                    substitutions,
                     customFormatters
             );
 
             var salesPrinter = new TabularDataPrinter<>(
                     sales,
-                    substitutionsMap,
+                    substitutions,
                     customFormatters
             );
 
             var saleItemsPrinter = new TabularDataPrinter<>(
                     saleItems,
-                    substitutionsMap,
+                    substitutions,
                     customFormatters);
 
             printers = Map.of(clients, clientsPrinter,
@@ -109,8 +108,8 @@ public class Main {
         }
     }
 
-    private static String formatDateTime(Object date) {
-        return DATE_TIME_FORMATTER.format((OffsetDateTime) date);
+    private static String formatDateTime(Object dateTime) {
+        return DATE_TIME_FORMATTER.format((OffsetDateTime) dateTime);
     }
 
     private static Object parseDateTime(String str) {
@@ -225,27 +224,97 @@ public class Main {
 
         var schema = table.getSchema();
         for (var column : schema.getColumns()) {
-            if (column instanceof DBColumnDefinition def)
-                fillRecordColumn(stdin, table, record, def);
+            switch (column) {
+                case DBColumnDefinition def -> fillRecordColumn(stdin, table, record, def);
+                case DBRelation rel -> fillRecordRelation(stdin, table, record, rel);
+                case DBManyRelation mRel -> fillRecordManyRelation(stdin, table, record, mRel);
+                default -> throw new IllegalStateException("Unexpected value: " + column);
+            }
         }
 
         return record;
     }
 
+    private static <TRecord extends DBRecord> void fillRecordManyRelation(Scanner stdin, TextDBTable<TRecord> table, TRecord record, DBManyRelation mRel) {
+    }
+
+    private static <TRecord extends DBRecord> void fillRecordRelation(Scanner stdin, TextDBTable<TRecord> table, TRecord record, DBRelation relation) {
+        String key = relation.getKey();
+        String substKey = substitutions.getOrDefault(key, key);
+
+        boolean success = false;
+
+        while (!success) {
+            System.out.print("Id de " + substKey + ": ");
+
+            try {
+                int id = stdin.nextInt();
+                stdin.nextLine();
+
+                var relRecord = relation.getTable()
+                        .select(DBUtils.selectMatchingId(id))
+                        .findFirst()
+                        .orElseThrow();
+
+                relation.getModifier().accept(record, relRecord);
+
+                success = true;
+            } catch (NoSuchElementException e) {
+                System.out.println("\tId de " + substKey + " incorreto.");
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     private static <TRecord extends DBRecord> void fillRecordColumn(Scanner stdin,
                                                                     TextDBTable<TRecord> table,
                                                                     TRecord record,
                                                                     DBColumnDefinition definition) {
         String key = definition.getKey();
-        String substKey = substitutionsMap.getOrDefault(key, key);
+        String substKey = substitutions.getOrDefault(key, key);
 
-        System.out.println("Digite o(a) " + substKey + ": ");
+        boolean success = false;
 
-        var value = ingestColumnValue(stdin, definition);
+        while (!success) {
+            try {
+                Type valueType = definition.getValueType();
 
-        definition.getModifier().accept(record, value);
+                System.out.print(substKey + ": ");
+
+                if (EnumUtils.typeIsEnum(valueType)) {
+                    System.out.println();
+                    printAllEnumOptions((Class<Enum<?>>) valueType);
+                }
+
+                var value = ingestColumnValue(stdin, definition);
+
+                definition.getModifier().accept(record, value);
+
+                success = true;
+            } catch (DateTimeParseException e) {
+                System.out.println("\tData com formato inválido.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("\tValor fora do intervalo esperado.");
+            }
+        }
     }
 
+    private static <TEnum extends Enum<?>> void printAllEnumOptions(Class<TEnum> enumClass) {
+        if (enumClass.isEnum()) {
+            System.out.println("\tOpções:");
+
+            var constants = enumClass.getEnumConstants();
+
+            for (var constant : constants) {
+                String constName = constant.name();
+                String substConstName = substitutions.getOrDefault(constName, constName);
+
+                System.out.println("\t\t" + constant.ordinal() + " = " + substConstName);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     private static Object ingestColumnValue(Scanner stdin, DBColumnDefinition definition) {
         Type valueType = definition.getValueType();
 
@@ -254,17 +323,24 @@ public class Main {
         else {
             Object value;
 
+            if (EnumUtils.typeIsEnum(valueType)) {
+                int ordinal = stdin.nextInt();
+                var constantsByOrdinal = EnumUtils.constantsByOrdinal((Class<Enum<?>>) valueType);
+                return constantsByOrdinal.get(ordinal);
+            }
             if (valueType == int.class)
                 value = stdin.nextInt();
             else if (valueType == double.class)
                 value = stdin.nextInt();
             else {
                 var valueStr = stdin.next();
+                stdin.nextLine();
+
                 var converter = customParsers.get(definition.getValueType());
                 if (converter == null)
                     return definition.getParserFormatter().parse(valueStr);
-                else
-                    return converter.apply(valueStr);
+
+                return converter.apply(valueStr);
             }
 
             stdin.nextLine();
@@ -281,6 +357,7 @@ public class Main {
             System.out.println("1. Fazer uma Venda");
             System.out.println("2. Exibir todos(as) Vendas");
             System.out.println("3. Consultar/Comparar Vendas");
+            System.out.println("4. Consultar Itens de uma Venda");
             System.out.print("Opção: ");
 
             int command = stdin.nextInt();

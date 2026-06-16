@@ -32,11 +32,9 @@ public class TabularDataPrinter<TRecord extends DBRecord> {
                 })
                 .toList());
 
-        boolean shouldFilterById = ids.length > 0;
+        var records = ids.length > 0 ? table.select(DBUtils.selectWithAnyId(ids)) : table.select(_ -> true);
 
-        tabularData.addAll(table.select(record -> !shouldFilterById ||
-                        Arrays.stream(ids).anyMatch(id -> id == record.getId()))
-                .map(record -> schema.resolveColumns()
+        tabularData.addAll(records.map(record -> schema.resolveColumns()
                         .map(col -> switch (col) {
                             case DBColumnDefinition def -> convertColumn(record, def);
                             case DBRelation rel -> convertRelation(record, rel);
@@ -97,7 +95,6 @@ public class TabularDataPrinter<TRecord extends DBRecord> {
 
     private String convertManyRelation(TRecord record, DBManyRelation mRel) {
         return String.join(ID_LIST_SEPARATOR + " ", mRel.getListAccessor().apply(record).stream()
-                .filter(Objects::nonNull)
                 .map(relRec -> Integer.toString(relRec.getId()))
                 .toList());
     }

@@ -1,8 +1,8 @@
 package Data;
 
 import TextDatabases.*;
-import TextDatabases.ValueConverters.DateTimeParserFormatter;
-import TextDatabases.ValueConverters.StringParserFormatter;
+import TextDatabases.ValueConverters.DateParserFormatter;
+import TextDatabases.ValueConverters.EnumParserFormatter;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class Sales extends TextDBTable<Sale> {
 
         columns.add(new DBColumnDefinition(
                 "soldDate",
-                new DateTimeParserFormatter(),
+                new DateParserFormatter(),
                 LocalDate.class,
                 DBUtils.getColumnValue(Sale::getSoldDate),
                 DBUtils.setColumnValue(Sale::setSoldDate)));
@@ -52,10 +52,10 @@ public class Sales extends TextDBTable<Sale> {
 
         columns.add(new DBColumnDefinition(
                 "kind",
-                new StringParserFormatter(),
-                String.class,
-                record -> ((Sale) record).getKind().toString(),
-                (record, value) -> ((Sale) record).setKind(SaleKind.valueOf((String) value))));
+                new EnumParserFormatter<>(SaleKind.class),
+                SaleKind.class,
+                DBUtils.getColumnValue(Sale::getKind),
+                DBUtils.setColumnValue(Sale::setKind)));
 
         return new DBTableSchema(columns, super.getSchema());
     }

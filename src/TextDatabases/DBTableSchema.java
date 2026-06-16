@@ -9,6 +9,8 @@ import static TextDatabases.StaticDefaults.ID_LIST_SEPARATOR;
 
 @SuppressWarnings("ClassCanBeRecord")
 public final class DBTableSchema {
+    private static final String NIL_PLACEHOLDER = "NIL";
+
     private final List<DBColumnDefinitionBase> columns;
     private final DBTableSchema extendsSchema;
 
@@ -46,6 +48,10 @@ public final class DBTableSchema {
 
     private String serializeRelation(DBRecord record, DBRelation relation) {
         var relRecord = relation.getAccessor().apply(record);
+
+        if (relRecord == null)
+            return NIL_PLACEHOLDER;
+
         return Integer.toString(relRecord.getId());
     }
 
@@ -82,6 +88,9 @@ public final class DBTableSchema {
     }
 
     private void deserializeRelation(DBRecord record, String valueStr, DBRelation relation) {
+        if (Objects.equals(valueStr, NIL_PLACEHOLDER))
+            return;
+
         int id = Integer.parseInt(valueStr);
 
         var relRecord = relation.getTable()
@@ -93,6 +102,9 @@ public final class DBTableSchema {
     }
 
     private void deserializeManyRelation(DBRecord record, String valueStr, DBManyRelation relation) {
+        if (valueStr.isEmpty())
+            return;
+
         Stream<Integer> ids = Arrays.stream(valueStr.split(ID_LIST_SEPARATOR))
                 .map(Integer::parseInt);
 

@@ -1,5 +1,6 @@
 package TextDatabases;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -34,5 +35,9 @@ public class DBUtils {
 
     public static <TRecord extends DBRecord> Predicate<TRecord> selectMatchingId(int id) {
         return record -> record.getId() == id;
+    }
+
+    public static <TRecord extends DBRecord> Predicate<TRecord> selectWithAnyId(int[] ids) {
+        return record -> Arrays.stream(ids).anyMatch(id -> record.getId() == id);
     }
 }
