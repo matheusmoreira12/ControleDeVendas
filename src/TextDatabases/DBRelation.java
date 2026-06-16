@@ -5,28 +5,28 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class DBRelation extends DBColumnDefinitionBase {
-    private final Function<DBRecord, DBRecord> getter;
-    private final BiConsumer<DBRecord, DBRecord> setter;
+    private final Function<DBRecord, DBRecord> accessor;
+    private final BiConsumer<DBRecord, DBRecord> modifier;
     private final TextDBTable<?> table;
 
     public DBRelation(String key,
                       TextDBTable<?> table,
                       Type valueType,
-                      Function<DBRecord, DBRecord> getter,
-                      BiConsumer<DBRecord, DBRecord> setter) {
+                      Function<DBRecord, DBRecord> accessor,
+                      BiConsumer<DBRecord, DBRecord> modifier) {
         super(key, valueType);
 
-        this.getter = getter;
-        this.setter = setter;
+        this.accessor = accessor;
+        this.modifier = modifier;
         this.table = table;
     }
 
-    public Function<DBRecord, DBRecord> getGetter() {
-        return getter;
+    public Function<DBRecord, DBRecord> getAccessor() {
+        return accessor;
     }
 
-    public BiConsumer<DBRecord, DBRecord> getSetter() {
-        return setter;
+    public BiConsumer<DBRecord, DBRecord> getModifier() {
+        return modifier;
     }
 
     public TextDBTable<?> getTable() {

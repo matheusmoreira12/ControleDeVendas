@@ -53,7 +53,7 @@ public class Sales extends TextDBTable<Sale> {
         columns.add(new DBColumnDefinition(
                 "kind",
                 new StringParserFormatter(),
-                SaleKind.class,
+                String.class,
                 record -> ((Sale) record).getKind().toString(),
                 (record, value) -> ((Sale) record).setKind(SaleKind.valueOf((String) value))));
 

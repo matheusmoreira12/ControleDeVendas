@@ -65,7 +65,9 @@ public class TabularDataPrinter<TRecord extends DBRecord> {
 
                 String col = row.get(colIndex);
 
-                if (rowIndex == 0)
+                if (col == null)
+                    System.out.print(" ".repeat(colWidth));
+                else if (rowIndex == 0)
                     System.out.print(StringUtils.padBoth(col, ' ', colWidth));
                 else
                     System.out.print(StringUtils.padEnd(col, ' ', colWidth));
@@ -95,12 +97,17 @@ public class TabularDataPrinter<TRecord extends DBRecord> {
 
     private String convertManyRelation(TRecord record, DBManyRelation mRel) {
         return String.join(ID_LIST_SEPARATOR + " ", mRel.getListAccessor().apply(record).stream()
+                .filter(Objects::nonNull)
                 .map(relRec -> Integer.toString(relRec.getId()))
                 .toList());
     }
 
     private String convertRelation(TRecord record, DBRelation rel) {
-        return Integer.toString(rel.getAccessor().apply(record).getId());
+        DBRecord relRecord = rel.getAccessor().apply(record);
+        if (relRecord == null)
+            return null;
+
+        return Integer.toString(relRecord.getId());
     }
 
     private String convertColumn(TRecord record, DBColumnDefinition column) {
@@ -119,7 +126,11 @@ public class TabularDataPrinter<TRecord extends DBRecord> {
                 if (row.size() <= i)
                     continue;
 
-                int width = row.get(i).length();
+                String rowStr = row.get(i);
+                if (rowStr == null)
+                    continue;
+
+                int width = rowStr.length();
 
                 if (width > widths[i])
                     widths[i] = width;

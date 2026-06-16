@@ -1,5 +1,7 @@
 package TextDatabases;
 
+import TextDatabases.ValueConverters.DateParserFormatter;
+
 import java.time.format.DateTimeFormatter;
 
 public class StaticDefaults {
@@ -7,4 +9,5 @@ public class StaticDefaults {
     static public final String ID_LIST_SEPARATOR = ",";
     static public final DateTimeFormatter FILE_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddhhmmssA");
     static public final DateTimeFormatter DB_DATETIME_FORMATTER = DateTimeFormatter.ISO_ZONED_DATE_TIME;
+    public static final DateTimeFormatter DB_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 }

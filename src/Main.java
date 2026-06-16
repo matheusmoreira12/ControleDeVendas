@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.function.Function;
 
@@ -113,6 +114,9 @@ public class Main {
     }
 
     private static Object parseDateTime(String str) {
+        if (Objects.equals(str, "agora"))
+            return OffsetDateTime.now();
+
         return OffsetDateTime.from(DATE_TIME_FORMATTER.parse(str));
     }
 
@@ -121,6 +125,9 @@ public class Main {
     }
 
     private static Object parseDate(String str) {
+        if (Objects.equals(str, "hoje"))
+            return LocalDate.now();
+
         return LocalDate.from(DATE_FORMATTER.parse(str));
     }
 
@@ -287,17 +294,16 @@ public class Main {
                     break;
                 case 2:
                     showAll(sales);
+                    break;
                 case 3:
                     lookupRecord(stdin, sales);
+                    break;
             }
         }
     }
 
     private static void makeSale(Scanner stdin) {
         Sale sale = createRecordAndFill(stdin, sales);
-
-        sale.setSoldDate(LocalDate.now());
-
         sales.insert(sale);
     }
 }

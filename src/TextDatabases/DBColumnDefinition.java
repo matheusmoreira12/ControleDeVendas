@@ -5,27 +5,31 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class DBColumnDefinition extends DBColumnDefinitionBase {
-    private final DBColumnConverter converter;
-    private final Function<DBRecord, Object> getter;
-    private final BiConsumer<DBRecord, Object> setter;
+    private final DBColumnParserFormatter parserFormatter;
+    private final Function<DBRecord, Object> accessor;
+    private final BiConsumer<DBRecord, Object> modifier;
 
-    public DBColumnDefinition(String key, DBColumnConverter converter, Type valueType, Function<DBRecord, Object> getter, BiConsumer<DBRecord, Object> setter) {
+    public DBColumnDefinition(String key,
+                              DBColumnParserFormatter parserFormatter,
+                              Type valueType,
+                              Function<DBRecord, Object> accessor,
+                              BiConsumer<DBRecord, Object> modifier) {
         super(key, valueType);
 
-        this.converter = converter;
-        this.getter = getter;
-        this.setter = setter;
+        this.parserFormatter = parserFormatter;
+        this.accessor = accessor;
+        this.modifier = modifier;
     }
 
-    public Function<DBRecord, Object> getGetter() {
-        return getter;
+    public Function<DBRecord, Object> getAccessor() {
+        return accessor;
     }
 
-    public BiConsumer<DBRecord, Object> getSetter() {
-        return setter;
+    public BiConsumer<DBRecord, Object> getModifier() {
+        return modifier;
     }
 
-    public DBColumnConverter getConverter() {
-        return converter;
+    public DBColumnParserFormatter getParserFormatter() {
+        return parserFormatter;
     }
 }
